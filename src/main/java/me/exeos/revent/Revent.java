@@ -48,9 +48,10 @@ public class Revent {
         // register owner subs
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         for (Method method : annotatedMethods) {
-            Subscribe subAnnotation = method.getDeclaredAnnotation(Subscribe.class);
+            @SuppressWarnings("unchecked") // validation in getSubAnnotatedMethods guarantees this
+            Class<? extends Event> target = (Class<? extends Event>) method.getParameterTypes()[0];
 
-            MethodType methodType = MethodType.methodType(void.class, subAnnotation.target());
+            MethodType methodType = MethodType.methodType(void.class, target);
             MethodHandle handle;
             try {
                 if (ownerIsStatic) {
@@ -61,7 +62,7 @@ public class Revent {
             } catch (NoSuchMethodException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
-            registeredByEvent.computeIfAbsent(subAnnotation.target(), _ -> new HashMap<>())
+            registeredByEvent.computeIfAbsent(target, _ -> new HashMap<>())
                     .computeIfAbsent(owner, _ -> new HashSet<>())
                     .add(handle);
         }
@@ -86,7 +87,7 @@ public class Revent {
                 continue;
             }
 
-            if (method.getReturnType() != void.class || !Arrays.equals(method.getParameterTypes(), new Class<?>[]{subAnnotation.target()})) {
+            if (method.getReturnType() != void.class || method.getParameterTypes().length != 1 || !Event.class.isAssignableFrom(method.getParameterTypes()[0])) {
                 throw new RuntimeException("Invalid method descriptor for handler method. Needs to return void and have exactly one parameter (The event)");
             }
 

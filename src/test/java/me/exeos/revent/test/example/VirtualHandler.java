@@ -10,7 +10,7 @@ public class VirtualHandler {
         EventTest.revent.register(this);
     }
 
-    @Subscribe(target = ExampleEvent.class)
+    @Subscribe()
     public void onExample(ExampleEvent event) {
         event.x = 2;
         event.y = 3;

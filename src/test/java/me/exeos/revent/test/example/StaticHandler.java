@@ -10,7 +10,7 @@ public class StaticHandler {
         EventTest.revent.register(StaticHandler.class);
     }
 
-    @Subscribe(target = ExampleEvent.class)
+    @Subscribe()
     public static void onExample(ExampleEvent event) {
         event.x = 2;
         event.y = 3;
