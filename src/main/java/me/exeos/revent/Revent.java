@@ -20,15 +20,10 @@ public class Revent {
             return;
         }
 
-        for (Map.Entry<Object, Set<MethodHandle>> entry : ownerSubMap.entrySet()) {
-            Object owner = entry.getKey();
-            for (MethodHandle handle : entry.getValue()) {
+        for (Set<MethodHandle> handles : ownerSubMap.values()) {
+            for (MethodHandle handle : handles) {
                 try {
-                    if (owner instanceof Class<?>) {
-                        handle.invoke(event);
-                    } else {
-                        handle.invoke(owner, event);
-                    }
+                    handle.invoke(event);
                 } catch (Throwable e) {
                     throw new RuntimeException(e);
                 }
@@ -61,12 +56,11 @@ public class Revent {
                 if (ownerIsStatic) {
                     handle = lookup.findStatic(ownerClass, method.getName(), methodType);
                 } else {
-                    handle = lookup.findVirtual(ownerClass, method.getName(), methodType);
+                    handle = lookup.findVirtual(ownerClass, method.getName(), methodType).bindTo(owner);
                 }
             } catch (NoSuchMethodException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
-
             registeredByEvent.computeIfAbsent(subAnnotation.target(), _ -> new HashMap<>())
                     .computeIfAbsent(owner, _ -> new HashSet<>())
                     .add(handle);
