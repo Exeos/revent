@@ -37,7 +37,7 @@ public class Revent {
     }
 
     public void register(Object owner) {
-        boolean ownerIsStatic = owner instanceof Class<?> c;
+        boolean ownerIsStatic = owner instanceof Class<?>;
         Class<?> ownerClass = ownerIsStatic ? (Class<?>) owner : owner.getClass();
 
         Set<Method> annotatedMethods = getSubAnnotatedMethods(ownerClass);
@@ -51,12 +51,11 @@ public class Revent {
         }
 
         // register owner subs
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
         for (Method method : annotatedMethods) {
             Subscribe subAnnotation = method.getDeclaredAnnotation(Subscribe.class);
 
-            MethodHandles.Lookup lookup = MethodHandles.lookup();
             MethodType methodType = MethodType.methodType(void.class, subAnnotation.target());
-
             MethodHandle handle;
             try {
                 if (ownerIsStatic) {
