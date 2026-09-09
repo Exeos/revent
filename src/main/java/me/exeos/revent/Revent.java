@@ -11,16 +11,26 @@ import java.util.*;
 
 public class Revent {
 
+    public static final int DEFAULT_POS = -1;
     private final Map<Class<?>, Set<Method>> clazzSubCache = new HashMap<>();
-    private final Map<Class<? extends Event>, Map<Object, Set<MethodHandle>>> registeredByEvent = new HashMap<>();
+    private final Map<Class<? extends Event>, Map<Object, Map<Integer, Set<MethodHandle>>>> registeredByEvent = new HashMap<>();
 
     public void fire(Event event) {
-        Map<Object, Set<MethodHandle>> ownerSubMap = registeredByEvent.get(event.getClass());
+        fire(event, DEFAULT_POS);
+    }
+
+    public void fire(Event event, int position) {
+        Map<Object, Map<Integer, Set<MethodHandle>>> ownerSubMap = registeredByEvent.get(event.getClass());
         if (ownerSubMap == null) {
             return;
         }
 
-        for (Set<MethodHandle> handles : ownerSubMap.values()) {
+        for (Map<Integer, Set<MethodHandle>> innerMap : ownerSubMap.values()) {
+            Set<MethodHandle> handles = innerMap.get(position);
+            if (handles == null || handles.isEmpty()) {
+                continue;
+            }
+
             for (MethodHandle handle : handles) {
                 try {
                     handle.invoke(event);
@@ -41,13 +51,14 @@ public class Revent {
         }
 
         // remove owner from event map
-        for (Map<Object, Set<MethodHandle>> ownerSubMap : registeredByEvent.values()) {
+        for (var ownerSubMap : registeredByEvent.values()) {
             ownerSubMap.remove(owner);
         }
 
         // register owner subs
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         for (Method method : annotatedMethods) {
+            int position = method.getDeclaredAnnotation(Subscribe.class).position();
             @SuppressWarnings("unchecked") // validation in getSubAnnotatedMethods guarantees this
             Class<? extends Event> target = (Class<? extends Event>) method.getParameterTypes()[0];
 
@@ -63,13 +74,14 @@ public class Revent {
                 throw new RuntimeException(e);
             }
             registeredByEvent.computeIfAbsent(target, _ -> new HashMap<>())
-                    .computeIfAbsent(owner, _ -> new HashSet<>())
+                    .computeIfAbsent(owner, _ -> new HashMap<>())
+                    .computeIfAbsent(position, _ -> new HashSet<>())
                     .add(handle);
         }
     }
 
     public void unregister(Object instance) {
-        for (Map<Object, Set<MethodHandle>> ownerSubMap : registeredByEvent.values()) {
+        for (var ownerSubMap : registeredByEvent.values()) {
             ownerSubMap.remove(instance);
         }
     }
